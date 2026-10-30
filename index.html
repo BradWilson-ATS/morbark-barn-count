@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#12161c">
+<title>Morbark barn count</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Same palette and type as the Bandit rack count app, so this screen can move into
+   it as a third plant without a restyle. */
+:root{
+  --ink:#12161c; --ink2:#48525f; --line:#d2d8e0; --bg:#f4f6f9; --card:#fff;
+  --blue:#0b4f9e; --blue-bg:#e8f0fb;
+  --green:#0d6236; --green-bg:#e4f3ea;
+  --amber:#7d5100; --amber-bg:#fdf1dc;
+  --red:#9c1818; --red-bg:#fbe7e7;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:17px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:0 0 44px;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px; margin:0 auto; padding:0 12px}
+
+header{background:var(--ink); color:#fff; padding:15px 12px 17px; margin-bottom:14px}
+header .inner{max-width:640px; margin:0 auto}
+header h1{margin:0; font-size:21px; letter-spacing:-.2px}
+header p{margin:4px 0 0; font-size:14px; color:#aeb9c7}
+.meta{display:flex; gap:9px; margin-top:13px}
+.meta label{flex:1; display:block; min-width:0}
+.meta span{display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.09em; color:#94a0af; margin-bottom:5px}
+.meta input{
+  width:100%; padding:12px 11px; border:1px solid #3a4452; border-radius:8px;
+  background:#1c222b; color:#fff; font-size:17px; font-family:inherit;
+}
+
+/* Check vs audit. The audit closes the month and becomes Morbark's usage number,
+   so picking it has to be a deliberate act, and the screen has to look different
+   once it is picked. */
+.kind{display:flex; gap:8px; margin-top:12px}
+.kind button{
+  flex:1; padding:12px 8px; border-radius:9px; border:1.5px solid #3a4452;
+  background:#1c222b; color:#cfd7e0; font-weight:700; font-size:16px; line-height:1.2; font-family:inherit; cursor:pointer;
+}
+.kind button small{display:block; font-weight:400; font-size:12.5px; color:#94a0af; margin-top:3px}
+.kind button.on{background:#fff; color:var(--ink); border-color:#fff}
+.kind button.on small{color:var(--ink2)}
+.kind button.on.audit{background:var(--amber-bg); border-color:#e8b54d; color:#4a3a00}
+
+.stick{
+  position:sticky; top:0; z-index:20; margin:0 0 14px;
+  padding:8px 12px; font-size:13.5px; font-weight:800; color:#fff;
+  text-align:center; letter-spacing:.03em; background:#3d4653;
+}
+.stick.audit{background:var(--amber)}
+
+.how{
+  background:var(--blue-bg); border:1px solid #c3d7f0; border-left:5px solid var(--blue);
+  border-radius:9px; padding:13px 15px; margin-bottom:14px; font-size:17px; color:#12233a;
+  line-height:1.35; font-weight:500;
+}
+.how b{color:var(--blue)}
+.how.audit{background:var(--amber-bg); border-color:#eeddb0; border-left-color:var(--amber); color:#4a3a00}
+.how.audit b{color:var(--amber)}
+.how p{margin:0}
+.how p + p{margin-top:8px}
+
+.pending{
+  background:var(--amber-bg); border:1px solid #eeddb0; border-left:5px solid var(--amber);
+  border-radius:9px; padding:13px 15px; margin-bottom:14px; font-size:15.5px; color:#4a3a00;
+  display:none;
+}
+.pending b{color:var(--amber)}
+
+.bay{font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--ink2); margin:18px 2px 7px}
+.bay:first-of-type{margin-top:4px}
+
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:11px;
+  padding:11px 12px; margin-bottom:8px; display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+}
+.card.blank{border-left:5px solid #c4ccd6}
+.card.low{border-left:5px solid var(--amber)}
+.card.ok{border-left:5px solid var(--green)}
+.card .who{flex:1; min-width:0}
+.card .pn{font-size:28px; font-weight:800; letter-spacing:-.2px}
+.card .mdl{font-size:17px; color:var(--ink2); line-height:1.3}
+.card .mm{font-size:16px; color:var(--ink2); margin-top:3px}
+.card .flag{font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; display:block; margin-top:1px}
+.card.low .flag{color:var(--amber)}
+.card.blank .flag{color:#8a95a3}
+.step{display:flex; align-items:center; gap:5px; flex:none}
+.step button{
+  width:48px; height:54px; border-radius:9px; border:1px solid var(--line);
+  background:#eef1f5; font-size:26px; font-weight:700; color:var(--ink); cursor:pointer; font-family:inherit;
+}
+.step button:active{background:#dde3ea}
+.step input{
+  width:68px; height:54px; text-align:center; font-size:24px; font-weight:800; font-family:inherit;
+  border:1.5px solid var(--line); border-radius:9px; color:var(--ink); background:#fff;
+}
+.step input::placeholder{color:#b3bcc7; font-weight:400}
+
+/* Month-end history, one panel per part. Audit only, and locked until that
+   part has a number, so the count is taken blind and checked after. */
+.hbtn{
+  display:none; margin-top:7px; padding:7px 11px; border-radius:7px; cursor:pointer;
+  border:1px solid #c3d7f0; background:var(--blue-bg); color:var(--blue);
+  font-weight:700; font-size:16px; line-height:1.2; font-family:inherit;
+}
+#parts.audit .hbtn{display:inline-block}
+.hbtn:disabled{border-color:var(--line); background:#f4f6f9; color:#8a95a3; cursor:default}
+.hist{flex-basis:100%; display:none; border-top:1px solid var(--line); padding-top:9px; font-size:15px}
+.hist.open{display:block}
+.hist table{width:100%; border-collapse:collapse}
+.hist td{padding:3px 0; vertical-align:top}
+.hist td.n{text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; padding-left:10px}
+.hist tr.tot td{border-top:1px solid var(--line); padding-top:6px}
+.hist .muted{color:var(--ink2)}
+.hist .bad{color:var(--red); font-weight:700; margin-top:7px; line-height:1.35}
+
+.note{display:block; margin-top:16px}
+.note span{display:block; font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:var(--ink2); margin:0 2px 6px}
+.note textarea{
+  width:100%; min-height:70px; padding:11px; border:1px solid var(--line); border-radius:9px;
+  font-size:16px; line-height:1.4; font-family:inherit; color:var(--ink); background:#fff; resize:vertical;
+}
+
+.tally{font-size:15px; color:var(--ink2); margin:16px 2px 10px}
+.tally b{color:var(--ink)}
+.tally.all{font-size:19px; font-weight:800; color:var(--green)}
+.tally.all b{color:var(--green)}
+.submit{
+  display:block; width:100%; padding:17px; border-radius:11px; border:0; cursor:pointer;
+  background:var(--ink); color:#fff; font-weight:800; font-size:19px; line-height:1.2; font-family:inherit;
+}
+.submit.audit{background:var(--amber)}
+.submit:disabled{background:#8a95a3; cursor:default}
+.subStatus{margin-top:11px; font-size:15.5px; line-height:1.4; min-height:1em}
+.subStatus.ok{color:var(--green); font-weight:700}
+.subStatus.err{color:var(--red); font-weight:800; font-size:19px; line-height:1.35}
+.subStatus.wait{color:var(--amber); font-weight:700}
+.again{
+  display:none; width:100%; margin-top:10px; padding:14px; border-radius:11px; cursor:pointer;
+  border:1.5px solid var(--line); background:#fff; color:var(--ink); font-weight:700; font-size:16px; line-height:1.2; font-family:inherit;
+}
+.testbar{background:var(--red); color:#fff; text-align:center; font-size:13.5px; font-weight:800;
+         padding:7px 10px; letter-spacing:.03em; display:none}
+pre.test{white-space:pre-wrap; word-break:break-word; font-size:12px; background:#fff;
+         border:1px solid var(--line); border-radius:9px; padding:10px; display:none; margin-top:12px}
+</style>
+</head>
+<body>
+
+<div class="testbar" id="testbar">TEST MODE — nothing is sent.</div>
+
+<header>
+  <div class="inner">
+    <h1>Morbark barn count</h1>
+    <p>Consignment barn &middot; cust 1614 &middot; Store 100</p>
+    <div class="meta">
+      <label><span>Date</span><input type="date" id="mDate"></label>
+      <label><span>Counted by</span><input type="text" id="mBy" autocomplete="name" placeholder="Name"></label>
+    </div>
+    <div class="kind" id="kind">
+      <button type="button" data-kind="check" class="on">Check count<small>weekly, closes nothing</small></button>
+      <button type="button" data-kind="audit" class="audit">Month-end audit<small>closes the month</small></button>
+    </div>
+  </div>
+</header>
+
+<div class="stick" id="stick">CHECK COUNT</div>
+
+<div class="wrap">
+  <div class="pending" id="pending"></div>
+  <div class="how" id="how"></div>
+  <div id="parts"></div>
+
+  <label class="note"><span>Note (optional)</span>
+    <textarea id="mNote" placeholder="e.g. 8 of the 461 pulled by mistake, put back"></textarea>
+  </label>
+
+  <div class="tally" id="tally"></div>
+  <button type="button" class="submit" id="bSubmit">Send count</button>
+  <div class="subStatus" id="subStatus"></div>
+  <button type="button" class="again" id="bAgain">Start a new count</button>
+  <pre class="test" id="testOut"></pre>
+</div>
+
+<script>
+/* ---- the barn parts --------------------------------------------------
+   The 18 ACTIVE parts on the Parts tab of Morbark Barn Log.xlsx, in SortOrder
+   (the paper sheet's order). Inactive parts (646, 39236-244/245, 636) stay off,
+   and so does 606 (off consignment 10/28/26, Matt).
+   This is a copy of the Parts tab: if a part goes on or off the program, or a
+   bay or min/max changes, change it here too. n8n drops a count for a part
+   that isn't active on the Parts tab (dropInactive), so a stale copy loses
+   that one part, not the whole count. */
+var PARTS = [
+  { p:'29312-644', bay:'Bay 1',   m:'30/36 Eu',      min:4,  max:4  },
+  { p:'29312-643', bay:'Bay 1',   m:'3000 Eu',       min:6,  max:6  },
+  { p:'29312-469', bay:'Bay 2',   m:'16/19/22/M20R', min:30, max:60 },
+  { p:'29312-629', bay:'Bay 3',   m:'10/13',         min:24, max:72 },
+  { p:'29312-626', bay:'Bay 4',   m:'Woodhog 3400/6400; Drum 40/36 30/36; Chiparvester 23X; Flail 223', min:8,  max:8  },
+  { p:'29312-461', bay:'Bay 4',   m:'Tub 1000/1600', min:12, max:16 },
+  { p:'29229RY',   bay:'Bay 5',   m:'RG37',          min:10, max:10 },
+  { p:'29228RY',   bay:'Bay 5',   m:'RG37',          min:10, max:10 },
+  { p:'28486RY',   bay:'Bay 5',   m:'RG37',          min:8,  max:8  },
+  { p:'28480RY',   bay:'Bay 5',   m:'RG37',          min:8,  max:8  },
+  { p:'29494RY',   bay:'Bay 5/6', m:'RG37/55',       min:30, max:60 },
+  { p:'29493RY',   bay:'Bay 5/6', m:'RG37/55',       min:30, max:60 },
+  { p:'29502RY',   bay:'Bay 6',   m:'RG55',          min:20, max:40 },
+  { p:'29501RY',   bay:'Bay 6',   m:'RG55',          min:20, max:40 },
+  { p:'38244RY',   bay:'Bay 7',   m:'RG80',          min:20, max:20 },
+  { p:'38243RY',   bay:'Bay 7',   m:'RG80',          min:20, max:20 },
+  { p:'38262RY',   bay:'Bay 7',   m:'RG80',          min:20, max:20 },
+  { p:'38263RY',   bay:'Bay 7',   m:'RG80',          min:20, max:20 }
+];
+
+var SUBMIT_URL = 'https://almatire.app.n8n.cloud/webhook/morbark-barn-count';
+var SITE = 'morbark_barn';
+/* ?test=1 builds the payload and shows it instead of sending. For trying the
+   screen on a phone before the n8n workflow is live. A copy opened as a file
+   on a computer is always a test copy. */
+var TEST = location.protocol === 'file:' || /[?&]test=1\b/.test(location.search);
+
+/* Month-end history: last audit + this month's barn work order lines, per
+   part, built from the barn log by n8n. Fetched whenever the screen opens with
+   signal and kept on the phone, so it's there in the barn without a hotspot.
+   Shape: { asOf: ISO, lastAudit: 'YYYY-MM-DD',
+            parts: { '<part>': { lastAudit: n, moves: [{date, wo, qty}] } } }
+   qty is negative on a removal. */
+var STATUS_URL = 'https://almatire.app.n8n.cloud/webhook/morbark-barn-status';
+var STATUS_KEY = 'morbark_barn_status_v1';
+/* Test copies show October 2026 from the log instead (9/29 audit + October
+   moves). With the 10/28 counts it gives 131 used, the 10/28 audit's 135 less
+   606's 4 (606 is off the screen now). */
+var SAMPLE_STATUS = { asOf: '2026-10-28T07:00:00', lastAudit: '2026-09-29', sample: true, parts: {
+  '29312-644': { lastAudit: 4,  moves: [] },
+  '29312-643': { lastAudit: 6,  moves: [] },
+  '29312-469': { lastAudit: 23, moves: [ { date:'2026-10-01', wo:'100002624', qty:20 },
+                                         { date:'2026-10-08', wo:'100002632', qty:20 },
+                                         { date:'2026-10-19', wo:'100002669', qty:40 } ] },
+  '29312-629': { lastAudit: 60, moves: [] },
+  '29312-626': { lastAudit: 8,  moves: [] },
+  '29312-461': { lastAudit: 12, moves: [] },
+  '29229RY':   { lastAudit: 10, moves: [] },
+  '29228RY':   { lastAudit: 10, moves: [] },
+  '28486RY':   { lastAudit: 8,  moves: [] },
+  '28480RY':   { lastAudit: 8,  moves: [] },
+  '29494RY':   { lastAudit: 60, moves: [] },
+  '29493RY':   { lastAudit: 60, moves: [] },
+  '29502RY':   { lastAudit: 40, moves: [] },
+  '29501RY':   { lastAudit: 40, moves: [] },
+  '38244RY':   { lastAudit: 20, moves: [ { date:'2026-10-22', wo:'100002680', qty:20 } ] },
+  '38243RY':   { lastAudit: 20, moves: [ { date:'2026-10-22', wo:'100002680', qty:20 } ] },
+  '38262RY':   { lastAudit: 20, moves: [ { date:'2026-10-22', wo:'100002680', qty:20 } ] },
+  '38263RY':   { lastAudit: 20, moves: [ { date:'2026-10-22', wo:'100002680', qty:20 } ] }
+} };
+var STATUS = null;
+var OPEN = PARTS.map(function(){ return false; });
+
+var QUEUE_KEY     = 'morbark_barn_count_pending_v1';
+/* Test sends keep their own counter so they never push a real ref to -2. */
+var REF_COUNT_KEY = 'morbark_barn_count_refcount_v1' + (TEST ? '_test' : '');
+var BY_KEY        = 'morbark_barn_count_by_v1';
+
+/* Every field starts null, not zero: zero is a real count (606 sat at 0 all
+   October), so a field nobody touched can't be allowed to read as one. */
+var ST = PARTS.map(function(){ return null; });
+var KIND = 'check';
+var sentRef = null;   /* set once this screen's count is sent or queued */
+
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function todayISO(){
+  var t = new Date();
+  return t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate());
+}
+function clockTime(d){
+  var h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? 'AM' : 'PM';
+  h = h % 12; if(h === 0) h = 12;
+  return h + ':' + pad2(m) + ' ' + ap;
+}
+function mdy(iso){   /* 2026-11-03 -> 11/03/26 */
+  var a = iso.split('-');
+  return a[1] + '/' + a[2] + '/' + a[0].slice(2);
+}
+
+/* ---- count reference -------------------------------------------------
+   BARN-YYMMDD from the count date, -2 / -3 on a second count of the same date
+   from this phone. Same shape as the Bandit refs (NW- / MAIN-), so it fits
+   MaddenCo's REF NUMBER field if it ever needs to. n8n makes it unique across
+   phones and may hand back a different suffix. Call once per actual send. */
+function nextCountRef(dateISO){
+  var raw = {};
+  try { raw = JSON.parse(localStorage.getItem(REF_COUNT_KEY) || '{}'); } catch(e){}
+  var n = (raw.date === dateISO) ? raw.n + 1 : 1;
+  try { localStorage.setItem(REF_COUNT_KEY, JSON.stringify({ date: dateISO, n: n })); } catch(e){}
+  var ymd = dateISO.slice(2,4) + dateISO.slice(5,7) + dateISO.slice(8,10);
+  return 'BARN-' + ymd + (n > 1 ? '-' + n : '');
+}
+
+function uncounted(){
+  return PARTS.filter(function(x, i){ return ST[i] === null; }).map(function(x){ return x.p; });
+}
+
+function build(){
+  var h = '', lastBay = null;
+  PARTS.forEach(function(x, i){
+    if(x.bay !== lastBay){ h += '<div class="bay">' + esc(x.bay) + '</div>'; lastBay = x.bay; }
+    h += '<div class="card blank" id="c' + i + '">'
+       +   '<div class="who"><div class="pn">' + esc(x.p) + '<span class="flag" id="g' + i + '"></span></div>'
+       +   '<div class="mdl">' + esc(x.m) + '</div>'
+       +   '<div class="mm">min ' + x.min + ' &middot; max ' + x.max + '</div>'
+       +   '<button type="button" class="hbtn" id="h' + i + '" data-h="' + i + '"></button></div>'
+       +   '<div class="step">'
+       +     '<button type="button" data-i="' + i + '" data-d="-1" aria-label="minus one">&minus;</button>'
+       +     '<input id="f' + i + '" data-i="' + i + '" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="999" placeholder="&ndash;" aria-label="' + esc(x.p) + ' on hand">'
+       +     '<button type="button" data-i="' + i + '" data-d="1" aria-label="plus one">+</button>'
+       +   '</div>'
+       +   '<div class="hist" id="p' + i + '"></div>'
+       + '</div>';
+  });
+  document.getElementById('parts').innerHTML = h;
+}
+
+function render(){
+  PARTS.forEach(function(x, i){
+    var c = document.getElementById('c' + i), g = document.getElementById('g' + i), v = ST[i];
+    if(v === null){ c.className = 'card blank'; g.textContent = 'not counted'; }
+    /* At min counts: the shop refills a kit at or below min (Matt, 10/28). */
+    else if(v <= x.min){ c.className = 'card low'; g.textContent = v < x.min ? 'under min' : 'at min'; }
+    else { c.className = 'card ok'; g.textContent = ''; }
+  });
+
+  var audit = KIND === 'audit';
+  document.querySelectorAll('#kind button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-kind') === KIND);
+  });
+  var st = document.getElementById('stick');
+  st.className = 'stick' + (audit ? ' audit' : '');
+  st.textContent = audit ? 'MONTH-END AUDIT — closes the month' : 'CHECK COUNT';
+  var how = document.getElementById('how');
+  how.className = 'how' + (audit ? ' audit' : '');
+  how.innerHTML = audit
+    ? '<p><b>Month-end audit.</b> These numbers become Morbark&rsquo;s usage for the month. Every part must be counted.</p>'
+      + '<p><b>Count first, then unload.</b> Nothing off the truck until this is sent.</p>'
+    : '<p><b>Unload, then count.</b> Today&rsquo;s delivery is part of the count.</p>'
+      + '<p>Zero is a real count &mdash; type 0. A blank means not counted.</p>';
+  if(audit) how.innerHTML += '<p>' + statusLine() + '</p>';
+  document.getElementById('parts').className = audit ? 'audit' : '';
+  renderHistory();
+
+  var todo = uncounted().length, done = PARTS.length - todo;
+  var low = PARTS.filter(function(x, i){ return ST[i] !== null && ST[i] <= x.min; }).length;
+  /* A "Not counted" warning is stale once a number changes; the next Send tap re-checks. */
+  if(!sentRef && !armed && document.getElementById('subStatus').classList.contains('err')) setStatus('');
+  var tally = document.getElementById('tally');
+  tally.className = 'tally' + (todo ? '' : ' all');
+  tally.innerHTML = (todo
+      ? '<b>' + done + ' of ' + PARTS.length + '</b> counted'
+      : '&#10003; All ' + PARTS.length + ' counted')
+    + (low ? ' &middot; <b>' + low + '</b> at or below min' : '');
+
+  var btn = document.getElementById('bSubmit');
+  btn.className = 'submit' + (audit ? ' audit' : '');
+  if(!sentRef){
+    btn.disabled = false;
+    btn.textContent = audit ? 'Send month-end audit' : 'Send check count';
+  }
+}
+
+/* ---- month-end history ------------------------------------------------ */
+function asOfText(iso){
+  var d = new Date(iso);
+  if(isNaN(d)) return '';
+  return (d.getMonth()+1) + '/' + d.getDate() + ' ' + clockTime(d);
+}
+function statusLine(){
+  if(!STATUS) return '<b>No history on this phone.</b> Open this screen once with signal before you head out.';
+  return (STATUS.sample ? '<b>Sample history (October 2026).</b> ' : '')
+    + 'Tap History on a part after you count it. Deliveries as of ' + esc(asOfText(STATUS.asOf)) + '.';
+}
+function histHTML(i){
+  var x = PARTS[i], v = ST[i], h = STATUS && STATUS.parts && STATUS.parts[x.p];
+  if(!h) return '<div class="muted">No history for ' + esc(x.p) + ' on this phone.</div>';
+  var rows = '<tr><td>Last audit ' + esc(mdy(STATUS.lastAudit)) + '</td><td class="n">' + h.lastAudit + '</td></tr>';
+  var book = h.lastAudit;
+  (h.moves || []).forEach(function(m){
+    book += m.qty;
+    rows += '<tr><td>' + (m.qty < 0 ? 'Removed ' : 'Delivered ') + esc(mdy(m.date).slice(0,5))
+          + ' &middot; WO ' + esc(m.wo) + '</td><td class="n">' + (m.qty < 0 ? '&minus;' + (-m.qty) : '+' + m.qty) + '</td></tr>';
+  });
+  if(!(h.moves || []).length) rows += '<tr><td class="muted">No deliveries this month</td><td></td></tr>';
+  rows += '<tr class="tot"><td>On the work orders</td><td class="n">' + book + '</td></tr>'
+        + '<tr><td>Counted</td><td class="n">' + v + '</td></tr>'
+        + '<tr><td><b>Used</b></td><td class="n">' + (book - v) + '</td></tr>';
+  var warn = v > book
+    ? '<div class="bad">Counted ' + (v - book) + ' more than the work orders hold. A delivery missing from MaddenCo, or a miscount.</div>'
+    : '';
+  return '<table>' + rows + '</table>' + warn;
+}
+function renderHistory(){
+  PARTS.forEach(function(x, i){
+    var b = document.getElementById('h' + i), p = document.getElementById('p' + i);
+    /* Cleared back to blank = locked again: no peeking, then recounting to match. */
+    if(KIND !== 'audit' || ST[i] === null) OPEN[i] = false;
+    b.disabled = ST[i] === null;
+    b.textContent = ST[i] === null ? 'History · count first' : (OPEN[i] ? '▾ Hide history' : '▸ History');
+    p.className = 'hist' + (OPEN[i] ? ' open' : '');
+    p.innerHTML = OPEN[i] ? histHTML(i) : '';
+  });
+}
+
+/* Cached copy first, so the barn has it with no signal; then refresh. A
+   failed refresh keeps the cached copy. */
+function loadStatus(){
+  if(TEST){ STATUS = SAMPLE_STATUS; return; }
+  try {
+    var c = JSON.parse(localStorage.getItem(STATUS_KEY) || 'null');
+    if(c && c.parts) STATUS = c;
+  } catch(e){}
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var t = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+  fetch(STATUS_URL, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+    .then(function(r){ if(t) clearTimeout(t); return r.ok ? r.json() : null; })
+    .then(function(j){
+      if(!j || !j.parts || !j.lastAudit) return;
+      STATUS = j;
+      try { localStorage.setItem(STATUS_KEY, JSON.stringify(j)); } catch(e){}
+      render();
+    })
+    .catch(function(){ if(t) clearTimeout(t); });
+}
+
+function setStatus(text, kind){
+  var el = document.getElementById('subStatus');
+  el.textContent = text;
+  el.className = 'subStatus' + (kind ? ' ' + kind : '');
+}
+
+function buildPayload(){
+  var now = new Date();
+  var dateISO = document.getElementById('mDate').value || todayISO();
+  var counts = [];
+  PARTS.forEach(function(x, i){ if(ST[i] !== null) counts.push({ part: x.p, onHand: ST[i] }); });
+  var nc = uncounted();
+  return {
+    site: SITE,
+    submittedAt: now.toISOString(),
+    countDate: dateISO,
+    time: clockTime(now),
+    countedBy: document.getElementById('mBy').value.trim(),
+    kind: KIND,
+    countRef: nextCountRef(dateISO),
+    counts: counts,
+    notCounted: nc,
+    complete: nc.length === 0,
+    note: document.getElementById('mNote').value.trim()
+  };
+}
+
+/* ---- sending (same queue/retry behaviour as the Bandit app) ---------- */
+function getQueue(){
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch(e){ return []; }
+}
+function setQueue(q){
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch(e){}
+}
+function renderPending(){
+  var q = getQueue(), el = document.getElementById('pending');
+  if(!q.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<b>' + q.length + ' count' + (q.length === 1 ? '' : 's') + ' waiting to send.</b> '
+    + 'Saved on this phone &mdash; will go out automatically once you have signal.';
+}
+
+/* { ok, countRef } on success (countRef = the final ref n8n assigned).
+   { ok:false, kind:'noresponse' | 'server' } on failure; both get queued. */
+function postPayload(payload){
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var t = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+  return fetch(SUBMIT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function(resp){
+    if(t) clearTimeout(t);
+    if(!resp.ok) return { ok: false, kind: 'server' };
+    return resp.json().then(
+      function(j){ return { ok: true, countRef: j && j.countRef }; },
+      function(){ return { ok: true }; }
+    );
+  }).catch(function(){
+    if(t) clearTimeout(t);
+    return { ok: false, kind: 'noresponse' };
+  });
+}
+
+function flushQueue(){
+  var q = getQueue();
+  if(!q.length) return Promise.resolve();
+  var remaining = q.slice();
+  function next(){
+    if(!remaining.length){ setQueue([]); renderPending(); return Promise.resolve(); }
+    var item = remaining[0];
+    return postPayload(item).then(function(r){
+      if(!r.ok){ setQueue(remaining); renderPending(); return; }
+      if(sentRef && sentRef === item.countRef){
+        sentRef = r.countRef || item.countRef;
+        document.getElementById('bSubmit').textContent = 'Sent ✓ ' + sentRef;
+        setStatus('Sent — ' + sentRef + ' is in.', 'ok');
+      }
+      remaining.shift();
+      return next();
+    });
+  }
+  return next();
+}
+
+/* After a send (or a queue) the numbers stay on screen but the button stays
+   off. A second tap with the same numbers still showing is how the Bandit app
+   sent two PO requests on 10/20; here it would log the count twice. A real
+   recount starts from blank with "Start a new count". */
+function lockScreen(ref, queued){
+  sentRef = ref;
+  var btn = document.getElementById('bSubmit');
+  btn.disabled = true;
+  btn.textContent = queued ? 'Saved ✓ ' + ref + ', will send automatically' : 'Sent ✓ ' + ref;
+  /* History stays usable after sending, for squaring up a discrepancy. */
+  document.querySelectorAll('#parts input, #parts .step button, #kind button, #mDate, #mNote')
+    .forEach(function(el){ el.disabled = true; });
+  document.getElementById('bAgain').style.display = 'block';
+}
+
+function resetScreen(){
+  sentRef = null; armed = false;
+  ST = PARTS.map(function(){ return null; });
+  OPEN = PARTS.map(function(){ return false; });
+  KIND = 'check';
+  document.getElementById('mDate').value = todayISO();
+  document.getElementById('mNote').value = '';
+  document.querySelectorAll('#parts input, #parts .step button, #kind button, #mDate, #mNote')
+    .forEach(function(el){ el.disabled = false; });
+  PARTS.forEach(function(x, i){ document.getElementById('f' + i).value = ''; });
+  document.getElementById('bAgain').style.display = 'none';
+  document.getElementById('testOut').style.display = 'none';
+  setStatus('');
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ---- events ---- */
+document.addEventListener('click', function(ev){
+  var k = ev.target.closest ? ev.target.closest('#kind button') : null;
+  if(k){
+    if(sentRef) return;
+    var want = k.getAttribute('data-kind');
+    if(want === KIND) return;
+    if(want === 'audit' && !confirm('Month-end audit?\n\nThis count closes the month and becomes Morbark’s usage. Use Check count for a weekly count.')) return;
+    KIND = want; armed = false; setStatus('');
+    render();
+    return;
+  }
+  var hb = ev.target.closest ? ev.target.closest('button[data-h]') : null;
+  if(hb){
+    var hi = +hb.getAttribute('data-h');
+    if(ST[hi] !== null){ OPEN[hi] = !OPEN[hi]; renderHistory(); }
+    return;
+  }
+  var b = ev.target.closest ? ev.target.closest('button[data-d]') : null;
+  if(!b || sentRef) return;
+  var i = +b.getAttribute('data-i');
+  var n = (ST[i] === null ? 0 : ST[i]) + (+b.getAttribute('data-d'));
+  if(n < 0) n = 0; if(n > 999) n = 999;
+  ST[i] = n;
+  document.getElementById('f' + i).value = n;
+  armed = false;
+  render();
+});
+
+document.addEventListener('input', function(ev){
+  var t = ev.target;
+  if(t.id === 'mBy'){ try { localStorage.setItem(BY_KEY, t.value.trim()); } catch(e){} return; }
+  if(t.tagName !== 'INPUT' || t.getAttribute('data-i') === null) return;
+  var i = +t.getAttribute('data-i');
+  /* A cleared field goes back to NOT COUNTED, not to zero. */
+  if(t.value.trim() === ''){ ST[i] = null; armed = false; render(); return; }
+  var n = parseInt(t.value, 10);
+  if(isNaN(n) || n < 0) n = 0; if(n > 999) n = 999;
+  ST[i] = n;
+  armed = false;
+  render();
+});
+
+document.addEventListener('focusin', function(ev){
+  if(ev.target.tagName === 'INPUT' && ev.target.getAttribute('data-i') !== null) ev.target.select();
+});
+
+/* Check count: first tap on an incomplete count names what's blank and does not
+   send; a second tap sends it as a partial (complete:false). Audit: every part
+   or nothing — barn_audit.py refuses a month with a part missing, so a partial
+   audit would only fail later, after the trucks are unloaded. Audit also reads
+   the numbers back before it sends. */
+var armed = false;
+
+document.getElementById('bSubmit').addEventListener('click', function(){
+  if(sentRef) return;
+  var todo = uncounted();
+  if(!document.getElementById('mDate').value){ setStatus('Pick the count date.', 'err'); return; }
+  if(KIND === 'audit' && todo.length){
+    setStatus('Month-end audit needs every part. Not counted: ' + todo.join(', ') + '.', 'err');
+    return;
+  }
+  if(KIND === 'check' && todo.length && !armed){
+    armed = true;
+    setStatus('Not counted: ' + todo.join(', ') + '. Go count ' + (todo.length === 1 ? 'it' : 'them')
+      + ', or tap Send again to send an incomplete count.', 'err');
+    return;
+  }
+  if(KIND === 'audit'){
+    var lines = PARTS.map(function(x, i){ return x.p + '   ' + ST[i]; }).join('\n');
+    if(!confirm('Send month-end audit for ' + mdy(document.getElementById('mDate').value) + '?\n\n' + lines)) return;
+  }
+  armed = false;
+  var payload = buildPayload();
+
+  if(TEST){
+    lockScreen(payload.countRef + ' (test)', false);
+    setStatus('Test mode: nothing sent. This is what would go to n8n.', 'wait');
+    var out = document.getElementById('testOut');
+    out.textContent = JSON.stringify(payload, null, 2);
+    out.style.display = 'block';
+    return;
+  }
+
+  var btn = this;
+  btn.disabled = true;
+  setStatus('Sending…', 'wait');
+  postPayload(payload).then(function(r){
+    if(r.ok){
+      lockScreen(r.countRef || payload.countRef, false);
+      setStatus('Sent — ' + (r.countRef || payload.countRef) + ' is in.', 'ok');
+      flushQueue();
+    } else {
+      var q = getQueue(); q.push(payload); setQueue(q); renderPending();
+      lockScreen(payload.countRef, true);
+      setStatus(r.kind === 'server'
+        ? 'Server problem. Count saved on this phone and will retry. Don’t recount.'
+        : 'No signal — count saved on this phone, will send automatically.', 'wait');
+    }
+  });
+});
+
+document.getElementById('bAgain').addEventListener('click', function(){
+  if(confirm('Start a new count? The screen clears. The count you sent is kept.')) resetScreen();
+});
+
+window.addEventListener('online', function(){ flushQueue(); });
+
+/* ---- start ---- */
+if(TEST) document.getElementById('testbar').style.display = 'block';
+document.getElementById('mDate').value = todayISO();
+try { document.getElementById('mBy').value = localStorage.getItem(BY_KEY) || ''; } catch(e){}
+build();
+loadStatus();
+render();
+renderPending();
+flushQueue();
+/* Offline shell (hosting addition, Brad 10/30): opens in the barn with no signal. */
+if('serviceWorker' in navigator && !TEST){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
